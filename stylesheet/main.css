@@ -1,0 +1,47 @@
+body {
+  background: #20262E;
+  padding: 20px;
+  font-family: Helvetica;
+}
+
+.char-image {
+  background-image: url(gsa.png);
+  background-size: cover;
+  background-position: center;
+  -webkit-filter: hue-rotate(180deg) saturate(2);
+          filter: hue-rotate(180deg) saturate(2);
+}
+
+#banner-message {
+  background: #fff;
+  border-radius: 4px;
+  padding: 20px;
+  font-size: 25px;
+  text-align: center;
+  -webkit-transition: all 0.2s;
+  transition: all 0.2s;
+  margin: 0 auto;
+  width: 300px;
+}
+
+#banner-message button {
+  background: #0077e6;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 14px;
+  font-size: 15px;
+  color: #fff;
+}
+
+#banner-message:hover {
+  background: #0077e6;
+  color: #fff;
+  margin-top: 40px;
+  width: 200px;
+}
+
+#banner-message:hover button {
+  background: #fff;
+  color: #000;
+}
+/*# sourceMappingURL=main.css.map */
