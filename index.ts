@@ -150,8 +150,14 @@ function ProcessImage(
           (err, newimage) => {}
         );
         var hrstart = process.hrtime();
-        //TODO only generate the gradient for each unique y position
-
+        let gradient: Color[] = [];
+        for (let index = 0; index < imageHeight; index++) {
+          gradient[index] = makeGradient(
+            firstColour,
+            secondColour,
+            index / imageHeight
+          );
+        }
         image.scan(0, 0, imageWidth, imageHeight, function(x, y, idx) {
           /*         var red = this.bitmap.data[idx + 0];
         var green = this.bitmap.data[idx + 1];
@@ -159,15 +165,9 @@ function ProcessImage(
           var alpha = this.bitmap.data[idx + 3];
 
           if (alpha >= alphaCutoff) {
-            let newColor: Color = makeGradient(
-              firstColour,
-              secondColour,
-              y / imageHeight
-            );
-
-            this.bitmap.data[idx + 0] = newColor.red();
-            this.bitmap.data[idx + 1] = newColor.green();
-            this.bitmap.data[idx + 2] = newColor.blue();
+            this.bitmap.data[idx + 0] = gradient[y].red();
+            this.bitmap.data[idx + 1] = gradient[y].green();
+            this.bitmap.data[idx + 2] = gradient[y].blue();
           } else {
             this.bitmap.data[idx + 0] = 0;
             this.bitmap.data[idx + 1] = 0;
@@ -182,7 +182,7 @@ function ProcessImage(
         });
 
         let hrend = process.hrtime(hrstart);
-        //console.info("Execution time: %ds %dms", hrend[0], hrend[1] / 1000000);
+        console.info("Execution time: %ds %dms", hrend[0], hrend[1] / 1000000);
         console.log("Got alpha channel and gradient. making outline");
         //    image.write("justinnner.png");
         //   alphaImage.write("1ustoutline.png");

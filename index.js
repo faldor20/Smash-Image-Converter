@@ -127,9 +127,9 @@ function ProcessImage(outlineWidth, imagePath, outputPath) {
             let alphaImage = new jimp_1.default(imageWidth, imageHeight, (err, newimage) => { });
             var hrstart = process.hrtime();
             //TODO only generate the gradient for each unique y position
-            let gradientArray = [];
+            let gradient = [];
             for (let index = 0; index < imageHeight; index++) {
-                gradientArray[index] = makeGradient(firstColour, secondColour, index / imageHeight);
+                gradient[index] = makeGradient(firstColour, secondColour, index / imageHeight);
             }
             image.scan(0, 0, imageWidth, imageHeight, function (x, y, idx) {
                 /*         var red = this.bitmap.data[idx + 0];
@@ -137,9 +137,9 @@ function ProcessImage(outlineWidth, imagePath, outputPath) {
               var blue = this.bitmap.data[idx + 2]; */
                 var alpha = this.bitmap.data[idx + 3];
                 if (alpha >= alphaCutoff) {
-                    this.bitmap.data[idx + 0] = gradientArray[y].red();
-                    this.bitmap.data[idx + 1] = gradientArray[y].green();
-                    this.bitmap.data[idx + 2] = gradientArray[y].blue();
+                    this.bitmap.data[idx + 0] = gradient[y].red();
+                    this.bitmap.data[idx + 1] = gradient[y].green();
+                    this.bitmap.data[idx + 2] = gradient[y].blue();
                 }
                 else {
                     this.bitmap.data[idx + 0] = 0;
@@ -153,7 +153,7 @@ function ProcessImage(outlineWidth, imagePath, outputPath) {
                 alphaImage.bitmap.data[idx + 3] = 255;
             });
             let hrend = process.hrtime(hrstart);
-            //console.info("Execution time: %ds %dms", hrend[0], hrend[1] / 1000000);
+            console.info("Execution time: %ds %dms", hrend[0], hrend[1] / 1000000);
             console.log("Got alpha channel and gradient. making outline");
             //    image.write("justinnner.png");
             //   alphaImage.write("1ustoutline.png");
