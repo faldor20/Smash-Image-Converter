@@ -16,6 +16,10 @@ const path = require("path");
 const program = require("commander");
 const jimp_1 = __importDefault(require("jimp"));
 const color_1 = __importDefault(require("color"));
+const fs_1 = __importDefault(require("fs"));
+const readline_1 = __importDefault(require("readline"));
+const config_json_1 = __importDefault(require("./config.json"));
+//--------------------------------------------
 clear();
 console.log(chalk.red(figlet.textSync("SMASH OUTLINE", { horizontalLayout: "full" })));
 program
@@ -25,48 +29,117 @@ program
     .option("-O,--outline", "select outline width")
     .option("-S, --saturation", "sets a maximum saturation for the light side of the gradient")
     .parse(process.argv);
+//-----------------------------------------------------------------
+/* let json = JSON.parse(
+  $.getJSON({
+    url: "http://spoonertuner.com/projects/test/test.json",
+    async: false
+  }).responseText
+); */
+//----------------------
 let maximumSaturation = program.saturation;
 //TODO: impliment a way to turn of random  saturation
 let alphaCutoff = 254;
-let outlinesize = 1.1;
-console.log("started");
-let outlineSize = program.outline;
+let outlineSize;
+if (program.outline != null)
+    outlineSize = program.outline;
+else
+    outlineSize = config_json_1.default.visual.outlineSize;
 if (maximumSaturation == null) {
-    maximumSaturation = 0;
+    maximumSaturation = config_json_1.default.visual.maximumSaturation;
 }
-if (outlineSize) {
-    Main(outlineSize);
+const inputPath = config_json_1.default.IO.inputPath;
+const outputPath = config_json_1.default.IO.outputPath;
+//---------------------------------------------------
+Main();
+function Main() {
+    console.log("started");
+    console.log("looking for images in path: " + inputPath);
+    let filePaths = fromDir(inputPath, ".png");
+    if (filePaths.length < 1)
+        console.log("could not find any images in the path: " + inputPath);
+    filePaths.forEach(filePath => {
+        if (outlineSize != null) {
+            ProcessImage(outlineSize, filePath, outputPath);
+        }
+        else {
+            console.log("you didn't set an outline. defaulting to 5");
+            ProcessImage(5, filePath, outputPath);
+        }
+    });
+    const rl = readline_1.default.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+        prompt: "rerun? 'y:n'"
+    });
+    rl.prompt();
+    rl.on("line", line => {
+        switch (line.trim()) {
+            case "y":
+                console.log("okay");
+                rl.close();
+                Main();
+                break;
+            case "n":
+                console.log("okay");
+                process.exit(0);
+                break;
+            default:
+                console.log(`Say what? I might have heard '${line.trim()}'`);
+                break;
+        }
+        rl.prompt();
+    });
 }
-else {
-    console.log("you didn't set an outline. defaulting to 5");
-    Main(5);
+//-------------------------------------------
+function fromDir(startPath, filter) {
+    //console.log('Starting from dir '+startPath+'/');
+    if (!fs_1.default.existsSync(startPath)) {
+        console.log("no dir ", startPath);
+        return Array();
+    }
+    let output = Array();
+    let files = fs_1.default.readdirSync(startPath);
+    for (let i = 0; i < files.length; i++) {
+        let filename = path.join(startPath, files[i]);
+        let stat = fs_1.default.lstatSync(filename);
+        if (stat.isDirectory()) {
+            console.log("-- found dir: ", filename);
+            output.concat(fromDir(filename, filter)); //recurse
+        }
+        else if (filename.indexOf(filter) >= 0) {
+            console.log("-- found: ", filename);
+            output.push(filename);
+        }
+    }
+    return output;
 }
-Math.random;
-function Main(outlineWidth) {
+function ProcessImage(outlineWidth, imagePath, outputPath) {
+    console.log("began processing image, please wait");
     let randomHue = Math.random() * 360;
     let firstColour = color_1.default.hsv(randomHue, Math.random() * maximumSaturation, 100);
     let secondColour = color_1.default.hsv(randomHue, 100, 100);
-    let image = jimp_1.default.read("images/gsa.png")
+    let image = jimp_1.default.read(imagePath)
         .then(image => {
         if (image.hasAlpha) {
-            console.log("Image loaded and has alpha channel");
             let imageHeight = image.bitmap.height;
             let imageWidth = image.bitmap.width;
             let alphaImage = new jimp_1.default(imageWidth, imageHeight, (err, newimage) => { });
             var hrstart = process.hrtime();
+            //TODO only generate the gradient for each unique y position
+            let gradientArray = [];
+            for (let index = 0; index < imageHeight; index++) {
+                gradientArray[index] = makeGradient(firstColour, secondColour, index / imageHeight);
+            }
             image.scan(0, 0, imageWidth, imageHeight, function (x, y, idx) {
                 /*         var red = this.bitmap.data[idx + 0];
               var green = this.bitmap.data[idx + 1];
               var blue = this.bitmap.data[idx + 2]; */
                 var alpha = this.bitmap.data[idx + 3];
                 if (alpha >= alphaCutoff) {
-                    let newColor = makeGradient(firstColour, secondColour, y / imageHeight);
-                    let r = lerp(255, 0, y / imageHeight);
-                    let g = lerp(0, 0, y / imageHeight);
-                    let b = lerp(0, 0, y / imageHeight);
-                    this.bitmap.data[idx + 0] = r; //newColor.red();
-                    this.bitmap.data[idx + 1] = g; //newColor.green();
-                    this.bitmap.data[idx + 2] = b; //newColor.blue();
+                    this.bitmap.data[idx + 0] = gradientArray[y].red();
+                    this.bitmap.data[idx + 1] = gradientArray[y].green();
+                    this.bitmap.data[idx + 2] = gradientArray[y].blue();
                 }
                 else {
                     this.bitmap.data[idx + 0] = 0;
@@ -80,7 +153,7 @@ function Main(outlineWidth) {
                 alphaImage.bitmap.data[idx + 3] = 255;
             });
             let hrend = process.hrtime(hrstart);
-            console.info("Execution time (hr): %ds %dms", hrend[0], hrend[1] / 1000000);
+            //console.info("Execution time: %ds %dms", hrend[0], hrend[1] / 1000000);
             console.log("Got alpha channel and gradient. making outline");
             //    image.write("justinnner.png");
             //   alphaImage.write("1ustoutline.png");
@@ -106,9 +179,9 @@ function Main(outlineWidth) {
                 opacitySource: 1,
                 opacityDest: 1
             }); // i will need to set my x and y point to something to offset teh scale so it ends up centered.
-            console.log(alphaImage);
+            // console.log(alphaImage);
             console.log("starting write");
-            alphaImage.write("gsaoutline.png", writeFinishedCallback);
+            let name = alphaImage.write(outputPath + imagePath.split("\\")[1].split(".")[0] + "-gradient.png", writeFinishedCallback);
         }
         else {
             console.log("image has no alpha channel");

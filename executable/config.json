@@ -1,0 +1,11 @@
+{
+  "visual": {
+    "alphaCutoff": 254,
+    "outlinesize": 5,
+    "maximumSaturation": 0
+  },
+  "IO": {
+    "inputPath": "input/",
+    "outputPath": "output/"
+  }
+}
